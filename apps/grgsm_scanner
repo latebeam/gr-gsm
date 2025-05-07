@@ -303,19 +303,43 @@ class channel_info(object):
         return "ARFCN: %4u, Freq: %6.1fM, CID: %5u, LAC: %5u, MCC: %3u, MNC: %3u, Pwr: %3i" % (
             self.arfcn, self.freq / 1e6, self.cid, self.lac, self.mcc, self.mnc, self.power)
 
-def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None, debug = False):
+def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None, debug = False, arfcn: int = None):
+    arfcn_ranges = [];
+    single_arfcn = arfcn != None
+    
+    if single_arfcn:
+        arfcn_ranges.append((int(arfcn), int(arfcn)))
+    else:
+        arfcn_ranges = gsm.arfcn.get_arfcn_ranges(band)
+    
     signallist = []
     channels_num = int(samp_rate / 0.2e6)
-    for arfcn_range in gsm.arfcn.get_arfcn_ranges(band):
+    if single_arfcn:
+        channels_num = 1
+    
+    for arfcn_range in arfcn_ranges:
         first_arfcn = arfcn_range[0]
         last_arfcn = arfcn_range[1]
         last_center_arfcn = last_arfcn - int((channels_num / 2) - 1)
 
-        current_freq = gsm.arfcn.arfcn2downlink(first_arfcn + int(channels_num / 2) - 1)
+        start_freq = gsm.arfcn.arfcn2downlink(first_arfcn + int(channels_num / 2) - 1)
+        if single_arfcn:
+            start_freq = gsm.arfcn.arfcn2downlink(first_arfcn)
+        
+        current_freq = start_freq
         last_freq = gsm.arfcn.arfcn2downlink(last_center_arfcn)
         stop_freq = last_freq + 0.2e6 * channels_num
 
         while current_freq < stop_freq:
+            if single_arfcn:
+                current_arfcn = str(gsm.arfcn.downlink2arfcn(current_freq))
+                sysinfo_dump_file = '/var/log/grgsm_scanner/gsm_sysinfo_dump_' + current_arfcn + '.log'
+                os.system('sudo rm -f ' + sysinfo_dump_file)
+                os.environ["LOG_SYSINFO_DUMP"] = sysinfo_dump_file
+                print("Scanning single ARFCN: {} - frequency: {}M".format(arfcn, current_freq/1000000))
+            else:
+                print("Scanning {}-{}: {percent:.2f}% done..".format(first_arfcn, last_arfcn,
+                percent=(current_freq - start_freq) / (stop_freq - start_freq) * 100))
 
             if not debug:
                 # silence rtl_sdr output:
@@ -333,10 +357,12 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None, debug = False):
                                        carrier_frequency=current_freq,
                                        ppm=ppm, gain=gain, args=args)
 
+            
             # start recording
             scanner.start()
             scanner.wait()
             scanner.stop()
+            
 
             freq_offsets = numpy.fft.ifftshift(
                 numpy.array(range(int(-numpy.floor(channels_num / 2)), int(numpy.floor((channels_num + 1) / 2)))) * 2e5)
@@ -346,6 +372,9 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None, debug = False):
 
             if detected_c0_channels:
                 chans = numpy.array(scanner.gsm_extract_system_info.get_chans())
+                if single_arfcn:
+                    chans = [0]
+                
                 found_freqs = current_freq + freq_offsets[(chans)]
 
                 cell_ids = numpy.array(scanner.gsm_extract_system_info.get_cell_id())
@@ -403,6 +432,7 @@ def argument_parser():
                       help="If set, verbose information output is printed: ccch configuration, cell ARFCN's, neighbour ARFCN's")
     parser.add_option("-d", "--debug", action="store_true",
                       help="Print additional debug messages")
+    parser.add_option("-a", "--arfcn", dest="arfcn", help="To scan only given ARFCN")
 
     """
         Dont forget: sudo sysctl kernel.shmmni=32000
@@ -432,8 +462,10 @@ def main(options = None):
             if options.verbose:
                 print(info.get_verbose_info())
     print("")
+    os.system('sudo mkdir -p /var/log/grgsm_scanner')
+    os.system('sudo chmod 777 /var/log/grgsm_scanner')
     do_scan(options.samp_rate, options.band, options.speed,
-            options.ppm, options.gain, options.args, prn = printfunc, debug = options.debug)
+            options.ppm, options.gain, options.args, prn = printfunc, debug = options.debug, arfcn=options.arfcn)
 
 if __name__ == '__main__':
     main()

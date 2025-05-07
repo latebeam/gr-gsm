@@ -33,6 +33,7 @@
 #include <iostream>
 #include <gsm/endian.h>
 #include <boost/foreach.hpp>
+#include <iomanip>
 extern "C" {
     #include <osmocom/gsm/gsm48_ie.h>
 }
@@ -60,6 +61,34 @@ namespace gr {
             d_c0_channels[info.id] = info;
         }
     }
+
+    std::string get_hex_string(uint8_t * msg_elements)
+    {
+        std::stringstream sstream;
+        for (int i=0; i<23; i++)
+        {
+            sstream << std::setfill ('0') << std::setw(2) << std::hex << static_cast<int>(msg_elements[i]);
+        }
+        return sstream.str();
+    }
+	
+    void log_sysinfo_dump(uint8_t *dump)
+    {
+		
+        if (getenv("LOG_SYSINFO_DUMP") == NULL)
+	    return;
+		
+	std::string log_file = getenv("LOG_SYSINFO_DUMP");
+        static FILE *file = fopen(log_file.c_str(), "a+");
+        if (file == NULL)
+        {
+            fprintf(stderr, "failed to create/open file!");
+            return;
+        }
+        
+        fprintf(file, get_hex_string(dump).c_str());
+        fprintf(file, "\n");
+    }
     
     void extract_system_info_impl::process_sysinfo(pmt::pmt_t msg){
         pmt::pmt_t message_plus_header_blob = pmt::cdr(msg);
@@ -69,6 +98,13 @@ namespace gr {
         struct gsm_sysinfo_freq freq[1024];
 
         if(msg_elements[2]==0x1b){
+            static int logged_1b = 0;
+            if (logged_1b == 0)
+            {
+                logged_1b = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+			
             chan_info info;
             info.id = be16toh(header->arfcn);                            //take arfcn
             info.pwr_db = header->signal_dbm;
@@ -92,6 +128,13 @@ namespace gr {
             }
         }
         else if(msg_elements[2]==0x1c){
+            static int logged_1c = 0;
+            if (logged_1c == 0)
+            {
+                logged_1c = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+
             chan_info info;
             info.id = be16toh(header->arfcn);                            //take arfcn
             info.pwr_db = header->signal_dbm;
@@ -112,6 +155,13 @@ namespace gr {
             }
         } 
         else if(msg_elements[2]==0x1a){ //System Information Type 2
+            static int logged_1a = 0;
+            if (logged_1a == 0)
+            {
+                logged_1a = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+		
             memset(freq, 0, sizeof(freq));
             chan_info info;
             info.id = be16toh(header->arfcn);                            //take arfcn
@@ -133,6 +183,13 @@ namespace gr {
             }
         }
         else if(msg_elements[2]==0x02){ //System Information Type 2bis
+            static int logged_02 = 0;
+            if (logged_02 == 0)
+            {
+                logged_02 = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+			
             memset(freq, 0, sizeof(freq));
             chan_info info;
             info.id = be16toh(header->arfcn);                            //take arfcn
@@ -153,6 +210,13 @@ namespace gr {
             }
         }
         else if(msg_elements[2]==0x03){ //System Information Type 2ter
+            static int logged_03 = 0;
+            if (logged_03 == 0)
+            {
+                logged_03 = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+		
             memset(freq, 0, sizeof(freq));
             chan_info info;
             info.id = be16toh(header->arfcn);                            //take arfcn
@@ -174,6 +238,13 @@ namespace gr {
         }
         else if(msg_elements[2]==0x19)
         { //System Information Type 1
+            static int logged_19 = 0;
+            if (logged_19 == 0)
+            {
+                logged_19 = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+		
             memset(freq, 0, sizeof(freq));
             chan_info info;
             info.id = be16toh(header->arfcn);                            //take arfcn
