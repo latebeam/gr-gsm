@@ -34,7 +34,7 @@ __band_conf = collections.OrderedDict([
     ('GSM900', {'f_start': 880.2e6, 'distance': 45e6, 'ranges': [(975, 1023), (0, 124)]}),
     ('DCS1800', {'f_start': 1710.2e6, 'distance': 95e6, 'ranges': [(512, 885)]}),
     ('GSM850', {'f_start': 824.2e6, 'distance': 45e6, 'ranges': [(128, 251)]}),
-    ('PCS1900', {'f_start': 1850.2e6, 'distance': 80e6, 'ranges': [(512+__arfcn_pcs, 810+__arfcn_pcs)]}), #PCS band is "special" as its channel number range overlap with DCS1800
+    ('PCS1900', {'f_start': 1850.2e6, 'distance': 80e6, 'ranges': [(512, 810)]}), #PCS band is "special" as its channel number range overlap with DCS1800
     ('GSM450', {'f_start': 450.6e6, 'distance': 10e6, 'ranges': [(259, 293)]}),
     ('GSM480', {'f_start': 479e6, 'distance': 10e6, 'ranges': [(306, 340)]}),
     ('GSM-R', {'f_start': 876.2e6, 'distance': 45e6, 'ranges': [(955, 1023), (0, 124)]}),
@@ -131,6 +131,20 @@ def arfcn2uplink(arfcn):
             arfcns_total = arfcn_end - arfcn_start + 1
     return -1
 
+def arfcnAndBand2uplink(arfcn, band):
+    if band is not None:
+        conf = __band_conf.get(band)
+        f_start = conf['f_start']
+        arfcns_total = 0
+        for arfcn_range in conf['ranges']:
+            arfcn_start = arfcn_range[0]
+            arfcn_end = arfcn_range[1]
+
+            if arfcn_start <= arfcn <= arfcn_end:
+                f = f_start + (__chan_spacing * (arfcn - arfcn_start + arfcns_total))
+                return round(f, 1)
+            arfcns_total = arfcn_end - arfcn_start + 1
+    return -1
 
 def arfcn2downlink(arfcn):
     band = arfcn2band(arfcn)
@@ -138,6 +152,13 @@ def arfcn2downlink(arfcn):
         conf = __band_conf.get(band)
         distance = conf['distance']
         return round(arfcn2uplink(arfcn) + distance, 1)
+    return -1
+    
+def arfcnAndBand2downlink(arfcn, band):
+    if band is not None:
+        conf = __band_conf.get(band)
+        distance = conf['distance']
+        return round(arfcnAndBand2uplink(arfcn, band) + distance, 1)
     return -1
 
 def uplink2arfcn(freq):

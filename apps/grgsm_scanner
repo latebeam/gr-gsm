@@ -323,11 +323,13 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None, debug = False, 
         last_center_arfcn = last_arfcn - int((channels_num / 2) - 1)
 
         start_freq = gsm.arfcn.arfcn2downlink(first_arfcn + int(channels_num / 2) - 1)
+        last_freq = gsm.arfcn.arfcn2downlink(last_center_arfcn)
+
         if single_arfcn:
-            start_freq = gsm.arfcn.arfcn2downlink(first_arfcn)
+            start_freq = gsm.arfcn.arfcnAndBand2downlink(first_arfcn, band)
+            last_freq = gsm.arfcn.arfcnAndBand2downlink(last_center_arfcn, band)
         
         current_freq = start_freq
-        last_freq = gsm.arfcn.arfcn2downlink(last_center_arfcn)
         stop_freq = last_freq + 0.2e6 * channels_num
 
         while current_freq < stop_freq:
