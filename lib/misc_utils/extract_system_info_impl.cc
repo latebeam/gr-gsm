@@ -264,6 +264,15 @@ namespace gr {
                 }
             }
         }
+        else if(0x07) //System Information Type 2quater
+        {
+            static int logged_07 = 0;
+            if (logged_07 == 0)
+            {
+                logged_07 = 1;
+                log_sysinfo_dump(msg_elements);
+            }
+        }
     }
     
     std::vector<int> extract_system_info_impl::get_chans()
