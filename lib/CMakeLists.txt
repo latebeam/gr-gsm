@@ -56,6 +56,7 @@ message(STATUS "Loading version ${VERSION} into constants...")
 #double escape for windows backslash path separators
 string(REPLACE "\\" "\\\\" prefix "${prefix}")
 
+set(VERSION "1.0.0")
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.cc.in
     ${CMAKE_CURRENT_BINARY_DIR}/constants.cc
