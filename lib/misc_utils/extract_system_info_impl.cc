@@ -264,7 +264,7 @@ namespace gr {
                 }
             }
         }
-        else if(0x07) //System Information Type 2quater
+        else if(msg_elements[2]==0x07) //System Information Type 2quater
         {
             static int logged_07 = 0;
             if (logged_07 == 0)
